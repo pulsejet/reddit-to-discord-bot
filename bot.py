@@ -94,7 +94,7 @@ except FileNotFoundError:
 async def filter_gemini(content: str) -> bool:
     logger.info("Validating content with Gemini AI")
     try:
-        prompt = f"{ai_validate_prompt}\n\n{content}"
+        prompt = f"One word answer YES or NO. {ai_validate_prompt}\n\n{content}"
         logger.info(f"Prompt to Gemini: {prompt}\n")
 
         client = genai.Client(api_key=gemini_api_key)

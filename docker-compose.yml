@@ -1,0 +1,9 @@
+services:
+  reddit-to-discord-bot:
+    build: .
+    container_name: reddit-to-discord-bot
+    volumes:
+      - ./seen_comments.pkl:/app/seen_comments.pkl
+      - ./.env:/app/.env
+    environment:
+      - PYTHONUNBUFFERED=1
