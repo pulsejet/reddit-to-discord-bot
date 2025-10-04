@@ -11,6 +11,7 @@ import json
 import pickle
 import asyncio
 import logging
+from google import genai
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -43,8 +44,22 @@ if check_interval < 10:
     logger.fatal("CHECK_INTERVAL_SECONDS must be at least 10 seconds")
     exit(1)
 
+# Gemini API credentials
+gemini_api_key = os.getenv('GEMINI_API_KEY')
+gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-lite')
+ai_validate_prompt = os.getenv('AI_VALIDATE_PROMPT')
+
 # Check if all required environment variables are set
-if not all([reddit_client_id, reddit_client_secret, discord_webhook_url, subreddits, search_term, pickle_file]):
+if not all([
+        reddit_client_id,
+        reddit_client_secret,
+        discord_webhook_url,
+        subreddits,
+        search_term,
+        pickle_file,
+        gemini_api_key,
+        ai_validate_prompt,
+    ]):
     logger.fatal("One or more required environment variables are missing or empty")
     exit(1)
 else:
@@ -76,6 +91,26 @@ except FileNotFoundError:
         pickle.dump(database, f)
 
 
+async def filter_gemini(content: str) -> bool:
+    logger.info("Validating content with Gemini AI")
+    try:
+        prompt = f"{ai_validate_prompt}\n\n{content}"
+        logger.info(f"Prompt to Gemini: {prompt}\n")
+
+        client = genai.Client(api_key=gemini_api_key)
+        response = client.models.generate_content(
+            model=gemini_model,
+            contents=prompt,
+        )
+
+        # Play safe - discard only if AI explicitly says "no"
+        response_text = response.text or ""
+        logger.info(f"Gemini response: {response_text}")
+        return not ('no' in response_text.lower())
+    except Exception as e:
+        logger.error(f"Error validating content with Gemini AI: {e}")
+        return True
+
 async def handle_object(
         typename: str,
         obj: praw.models.Comment | praw.models.Submission,
@@ -89,6 +124,11 @@ async def handle_object(
     global dirty
     database.add(obj.id)
     dirty = True
+
+    # Validate comment with Gemini AI
+    if not await filter_gemini(body[:2000]):
+        logger.info(f"Object {obj.id} filtered out by Gemini AI")
+        return
 
     # Trim comment body to 500 characters
     if len(body) > 500:
