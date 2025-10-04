@@ -37,10 +37,24 @@ search_term = os.getenv('SEARCH_TERM')
 # Pickle file to store seen comments in
 pickle_file = os.getenv('DATABASE_FILE', 'seen_comments.pkl')
 
+# Interval between checks in seconds
+check_interval = int(os.getenv('CHECK_INTERVAL_SECONDS', '300'))
+if check_interval < 10:
+    logger.fatal("CHECK_INTERVAL_SECONDS must be at least 10 seconds")
+    exit(1)
+
 # Check if all required environment variables are set
 if not all([reddit_client_id, reddit_client_secret, discord_webhook_url, subreddits, search_term, pickle_file]):
     logger.fatal("One or more required environment variables are missing or empty")
     exit(1)
+else:
+    logger.info("")
+    logger.info("Loaded configuration:")
+    logger.info(f"  Subreddits: {', '.join(subreddits)}")
+    logger.info(f"  Search term: {search_term}")
+    logger.info(f"  Database file: {pickle_file}")
+    logger.info(f"  Check interval: {check_interval} seconds")
+    logger.info("")
 
 # Initialize Reddit and Discord clients
 reddit = praw.Reddit(client_id=reddit_client_id,
@@ -136,7 +150,16 @@ async def start_bot():
         logger.info(f"Saving {len(database)} objects to database file")
         with open(pickle_file, 'wb') as f:
             pickle.dump(database, f)
+    else:
+        logger.info("No new objects detected, skipping database update")
+
+async def bot_loop():
+    while True:
+        logger.info("Checking for new comments and posts")
+        await start_bot()
+        logger.info(f"Sleeping for {check_interval} seconds")
+        await asyncio.sleep(check_interval)
 
 # Start bot
 if __name__ == '__main__':
-    asyncio.run(start_bot())
+    asyncio.run(bot_loop())
