@@ -80,7 +80,7 @@ async def handle_object(
         typename: str,
         obj: praw.models.Comment | praw.models.Submission,
         body: str):
-    if search_term not in body.lower():
+    if search_term.lower() not in body.lower():
         return
     if obj.id in database:
         return
