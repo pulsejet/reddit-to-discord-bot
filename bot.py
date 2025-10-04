@@ -130,7 +130,9 @@ async def start_bot():
         await handle_object('post', submission, submission.selftext)
 
     # Save seen comments to file
+    global dirty
     if dirty:
+        dirty = False
         logger.info(f"Saving {len(database)} objects to database file")
         with open(pickle_file, 'wb') as f:
             pickle.dump(database, f)
