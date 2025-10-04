@@ -14,7 +14,6 @@ Useful for finding user feedback on a product, service or topic.
 
     SUBREDDITS=comma,separated,list,of,subreddits
     SEARCH_TERM=word_or_phrase_to_search_for
-    DATABASE_FILE=seen_comments.pkl
     CHECK_INTERVAL_SECONDS=300
 
     GEMINI_API_KEY=your_gemini_api_key
